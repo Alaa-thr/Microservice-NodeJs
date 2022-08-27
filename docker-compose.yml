@@ -1,0 +1,89 @@
+#this file has commandes to create containers with specific images, to avoid the creation of 
+#the commandes everytime in the terminal
+
+version: '3' # version of docker-compose
+
+services: #our containers
+
+  http_app:
+    container_name: http-app
+    build: # to execute the image node in Dockerfile
+      context: ./http-app
+      dockerfile: ./Dockerfile 
+    ports:
+      - 3000:3000
+    volumes:
+      - ./http-app:/usr/src/app
+      - http_app_node_modules:/usr/src/app/node_modules
+    environment:
+      - PORT=3000
+      - REDIS_URI=redis://redis:6379
+    depends_on:
+      - redis
+      - orders_ms
+    networks:
+      - nesjs-network
+  
+  orders_ms:
+    container_name: orders-ms
+    build:
+      context: ./orders-ms
+      dockerfile: ./Dockerfile
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017
+      - DB_NAME=big_nova_test
+      - REDIS_URI=redis://redis:6379
+    volumes:
+      - ./orders-ms/:/usr/src/app
+      - orders_ms_node_modules:/usr/src/app/node_modules
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - nesjs-network
+
+  suppliers_ms:
+    container_name: suppliers-ms
+    build:
+      context: ./suppliers-ms
+      dockerfile: ./Dockerfile
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017
+      - DB_NAME=big_nova_test
+      - REDIS_URI=redis://redis:6379
+    volumes:
+      - ./suppliers-ms/:/usr/src/app
+      - suppliers_ms_node_modules:/usr/src/app/node_modules
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - nesjs-network
+
+  mongodb: # to create container that has mongodb as an image 
+    container_name: mongodb
+    image: mongo:4.0 #the image we want to install with its version
+    ports:
+      - "27017:27017" #the port of the mongodb to access to it, the first one is to use in our localhost and the second is used inside the container
+    volumes:
+      - mongodb_data:/data/db # do the relation between folders "the first one is in our laptop and the second is in the container", for keep the data we used to not lose it when we stop the container 
+    networks:
+      - nesjs-network 
+
+  redis: #same as the mongodb except the image is redis
+    container_name: redis
+    image: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - nesjs-network
+
+volumes: #declaration of volums that the containers needs, if they don't exist docker will create them
+    mongodb_data:
+    redis_data:
+    http_app_node_modules:
+    orders_ms_node_modules:
+    suppliers_ms_node_modules:
+
+networks:
+  nesjs-network:
